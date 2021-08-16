@@ -1,7 +1,7 @@
 module.exports = {
-    theme: {
-        fontFamily: {
-            sans: ['Montserrat']
-        }
+  theme: {
+    fontFamily: {
+      sans: ['Montserrat']
     }
+  }
 }
