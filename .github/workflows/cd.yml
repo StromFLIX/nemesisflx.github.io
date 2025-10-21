@@ -1,33 +1,66 @@
-name: cd
+name: cdname: cd
 
-on: [push, pull_request]
 
-jobs:
-  cd:
-    runs-on: ${{ matrix.os }}
 
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-        node: [14]
+on: [push, pull_request]on: [push, pull_request]
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@master
 
-      - name: Setup node env
-        uses: actions/setup-node@v2.1.2
-        with:
-          node-version: ${{ matrix.node }}
 
-      - name: Install dependencies
-        run: yarn
+jobs:jobs:
 
-      - name: Generate
-        run: yarn run generate
+  cd:  cd:
 
-      - name: Deploy
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist
+    runs-on: ${{ matrix.os }}    runs-on: ${{ matrix.os }}
+
+
+
+    strategy:    strategy:
+
+      matrix:      matrix:
+
+        os: [ubuntu-latest]        os: [ubuntu-latest]
+
+        node: [20]        node: [20]
+
+
+
+    steps:    steps:
+
+      - name: Checkout      - name: Checkout
+
+        uses: actions/checkout@master        uses: actions/checkout@master
+
+
+
+      - name: Setup node env      - name: Setup node env
+
+        uses: actions/setup-node@v4        uses: actions/setup-node@v4
+
+        with:        with:
+
+          node-version: ${{ matrix.node }}          node-version: ${{ matrix.node }}
+
+
+
+      - name: Install dependencies      - name: Install dependencies
+
+        run: npm install        run: npm install
+
+
+
+      - name: Generate      - name: Generate
+
+        run: npm run generate        run: npm run generate
+
+
+
+      - name: Deploy      - name: Deploy
+
+        uses: peaceiris/actions-gh-pages@v3        uses: peaceiris/actions-gh-pages@v3
+
+        with:        with:
+
+          github_token: ${{ secrets.GITHUB_TOKEN }}          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+          publish_dir: ./.output/public          publish_dir: ./.output/public
+

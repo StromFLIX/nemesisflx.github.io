@@ -5,19 +5,19 @@
     <div class="w-screen flex justify-center mt-3">
       <button class="m-2 p-1 px-2 shadow-lg rounded-full bg-blue-500">
         <a href="mailto:felix.moenckemeyer@gmail.com">
-          <fa style="font-size: 16px" :icon="['fas', 'envelope']" />
+          <font-awesome-icon style="font-size: 16px" :icon="['fas', 'envelope']" />
         </a>
       </button>
       <button class="m-2 rounded-full shadow-lg bg-blue-500" style="padding: 0px 9px 0px 9px">
         <a href="https://www.linkedin.com/in/felix-m%C3%B6nckemeyer-6887a61a0/">
-          <fa style="font-size: 16px" :icon="['fab', 'linkedin-in']" />
+          <font-awesome-icon style="font-size: 16px" :icon="['fab', 'linkedin-in']" />
         </a>
       </button>
       <div class="relative">
         <div class="m-1" @mouseenter="cvHover = true" @mouseleave="setHoverTimer()">
           <div class="p-1 bg-blue-500 shadow-lg rounded-full">
             <div class="rounded-full bg-gray-200" style="padding: 4px 10px 4px 10px">
-              <fa style="font-size: 16px" :icon="['fas', 'file-alt']" />
+              <font-awesome-icon style="font-size: 16px" :icon="['fas', 'file-alt']" />
             </div>
           </div>
         </div>
@@ -79,37 +79,30 @@
       </div>
       <button class="m-2 p-1 px-2 shadow-lg rounded-full bg-blue-500">
         <a href="https://github.com/NemesisFLX">
-          <fa style="font-size: 16px" :icon="['fab', 'github']" />
+          <font-awesome-icon style="font-size: 16px" :icon="['fab', 'github']" />
         </a>
       </button>
       <button class="m-2 rounded-full shadow-lg bg-blue-500" style="padding: 0px 6px 0px 6px">
         <a href="https://discordapp.com/users/582992527288696874/">
-          <fa style="font-size: 16px" :icon="['fab', 'discord']" />
+          <font-awesome-icon style="font-size: 16px" :icon="['fab', 'discord']" />
         </a>
       </button>
     </div>
   </div>
 </template>
 
-<script>
+<script setup>
+const cvHover = ref(false)
+let timer = null
 
-export default {
-  data () {
-    return {
-      timer: null,
-      cvHover: false
-    }
-  },
-  methods: {
-    setHoverTimer () {
-      this.timer = setTimeout(() => {
-        this.cvHover = false
-      }, 300)
-    },
-    clearHoverTimer () {
-      clearTimeout(this.timer)
-    }
-  }
+const setHoverTimer = () => {
+  timer = setTimeout(() => {
+    cvHover.value = false
+  }, 300)
+}
+
+const clearHoverTimer = () => {
+  clearTimeout(timer)
 }
 </script>
 
