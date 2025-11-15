@@ -14,31 +14,48 @@ let gl = null
 let program = null
 let animationFrameId = null
 let particles = []
-const PARTICLE_COUNT = 10
 
-// Vertex shader - positions particles
+// Boid parameters
+const PERCEPTION_RADIUS = 150
+const SEPARATION_RADIUS = 15
+const CRITICAL_DISTANCE = 15
+const MAX_SPEED = 1.5
+const MIN_SPEED = 0.8
+const MAX_FORCE = 0.0016
+const SEPARATION_WEIGHT = 8.0
+const CRITICAL_SEPARATION_WEIGHT = 5.0
+const ALIGNMENT_WEIGHT = 0.15
+const COHESION_WEIGHT = 0.1
+
+// Vertex shader - positions and rotates triangles
 const vertexShaderSource = `
   attribute vec2 a_position;
+  attribute vec2 a_offset;
+  attribute float a_rotation;
   uniform vec2 u_resolution;
   
   void main() {
-    vec2 clipSpace = (a_position / u_resolution) * 2.0 - 1.0;
+    // Rotate the offset
+    float c = cos(a_rotation);
+    float s = sin(a_rotation);
+    vec2 rotated = vec2(
+      a_offset.x * c - a_offset.y * s,
+      a_offset.x * s + a_offset.y * c
+    );
+    
+    // Apply position and offset
+    vec2 finalPos = a_position + rotated;
+    vec2 clipSpace = (finalPos / u_resolution) * 2.0 - 1.0;
     gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);
-    gl_PointSize = 4.0;
   }
 `
 
-// Fragment shader - makes particles white
+// Fragment shader - stone color (Tailwind stone-400: #a8a29e)
 const fragmentShaderSource = `
   precision mediump float;
   
   void main() {
-    // Create circular particles
-    vec2 coord = gl_PointCoord - vec2(0.5);
-    if (length(coord) > 0.5) {
-      discard;
-    }
-    gl_FragColor = vec4(1.0, 1.0, 1.0, 0.8);
+    gl_FragColor = vec4(0.659, 0.635, 0.620, 0.6);
   }
 `
 
@@ -72,32 +89,244 @@ function createProgram(gl, vertexShader, fragmentShader) {
 }
 
 function initParticles(width, height) {
+  // Calculate particle count based on screen area
+  const area = width * height
+  const particleCount = Math.floor(area / 30000)
+  console.log('Initializing', particleCount, 'particles for area', area)
+  
   particles = []
-  for (let i = 0; i < PARTICLE_COUNT; i++) {
+  for (let i = 0; i < particleCount; i++) {
+    const angle = Math.random() * Math.PI * 2
+    const speed = MIN_SPEED + Math.random() * (MAX_SPEED - MIN_SPEED)
     particles.push({
       x: Math.random() * width,
       y: Math.random() * height,
-      vx: (Math.random() - 0.5) * 2,
-      vy: (Math.random() - 0.5) * 2
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      ax: 0,
+      ay: 0
     })
   }
 }
 
-function updateParticles(width, height) {
-  for (let particle of particles) {
-    // Update position
-    particle.x += particle.vx
-    particle.y += particle.vy
+function separation(boid, neighbors) {
+  let steerX = 0
+  let steerY = 0
+  let count = 0
+  let criticalSteerX = 0
+  let criticalSteerY = 0
+  let criticalCount = 0
+  
+  for (let other of neighbors) {
+    const dx = boid.x - other.x
+    const dy = boid.y - other.y
+    const dist = Math.sqrt(dx * dx + dy * dy)
     
-    // Bounce off edges
-    if (particle.x <= 0 || particle.x >= width) {
-      particle.vx *= -1
-      particle.x = Math.max(0, Math.min(width, particle.x))
+    if (dist > 0 && dist < SEPARATION_RADIUS) {
+      // Normal separation
+      const force = 1.0 / (dist * dist)
+      steerX += (dx / dist) * force
+      steerY += (dy / dist) * force
+      count++
+      
+      // Critical emergency avoidance for very close boids
+      if (dist < CRITICAL_DISTANCE) {
+        const emergencyForce = 1.0 / (dist * dist * dist)
+        criticalSteerX += (dx / dist) * emergencyForce
+        criticalSteerY += (dy / dist) * emergencyForce
+        criticalCount++
+      }
     }
-    if (particle.y <= 0 || particle.y >= height) {
-      particle.vy *= -1
-      particle.y = Math.max(0, Math.min(height, particle.y))
+  }
+  
+  if (count > 0) {
+    steerX /= count
+    steerY /= count
+  }
+  
+  if (criticalCount > 0) {
+    criticalSteerX /= criticalCount
+    criticalSteerY /= criticalCount
+    // Override with critical avoidance if too close
+    return { x: steerX + criticalSteerX * 3, y: steerY + criticalSteerY * 3 }
+  }
+  
+  return { x: steerX, y: steerY }
+}
+
+function alignment(boid, neighbors) {
+  let avgVx = 0
+  let avgVy = 0
+  let count = 0
+  
+  for (let other of neighbors) {
+    avgVx += other.vx
+    avgVy += other.vy
+    count++
+  }
+  
+  if (count > 0) {
+    avgVx /= count
+    avgVy /= count
+    
+    // Calculate steering force
+    return { x: avgVx - boid.vx, y: avgVy - boid.vy }
+  }
+  
+  return { x: 0, y: 0 }
+}
+
+function cohesion(boid, neighbors) {
+  let centerX = 0
+  let centerY = 0
+  let count = 0
+  
+  for (let other of neighbors) {
+    centerX += other.x
+    centerY += other.y
+    count++
+  }
+  
+  if (count > 0) {
+    centerX /= count
+    centerY /= count
+    
+    // Calculate steering force towards center
+    return { x: centerX - boid.x, y: centerY - boid.y }
+  }
+  
+  return { x: 0, y: 0 }
+}
+
+function limitForce(fx, fy, max) {
+  const mag = Math.sqrt(fx * fx + fy * fy)
+  if (mag > max) {
+    return { x: (fx / mag) * max, y: (fy / mag) * max }
+  }
+  return { x: fx, y: fy }
+}
+
+function limitSpeed(vx, vy, max) {
+  const speed = Math.sqrt(vx * vx + vy * vy)
+  
+  // Enforce minimum speed to keep boids always moving
+  if (speed < MIN_SPEED) {
+    const scale = MIN_SPEED / (speed || 0.001)
+    return { x: vx * scale, y: vy * scale }
+  }
+  
+  if (speed > max) {
+    return { x: (vx / speed) * max, y: (vy / speed) * max }
+  }
+  return { x: vx, y: vy }
+}
+
+function wrapEdges(boid, width, height) {
+  const turnFactor = 0.08
+  const margin = 20
+  const randomness = 0.03
+  
+  // Add random drift to create more natural movement
+  boid.vx += (Math.random() - 0.5) * randomness
+  boid.vy += (Math.random() - 0.5) * randomness
+  
+  // Steer away from left edge
+  if (boid.x < margin) {
+    boid.vx += turnFactor + Math.random() * turnFactor
+  }
+  // Steer away from right edge
+  if (boid.x > width - margin) {
+    boid.vx -= turnFactor + Math.random() * turnFactor
+  }
+  // Steer away from top edge
+  if (boid.y < margin) {
+    boid.vy += turnFactor + Math.random() * turnFactor
+  }
+  // Steer away from bottom edge
+  if (boid.y > height - margin) {
+    boid.vy -= turnFactor + Math.random() * turnFactor
+  }
+  
+  // Hard clamp to prevent any crossing
+  boid.x = Math.max(0, Math.min(width, boid.x))
+  boid.y = Math.max(0, Math.min(height, boid.y))
+}
+
+function updateParticles(width, height) {
+  // Calculate forces for each boid
+  for (let i = 0; i < particles.length; i++) {
+    const boid = particles[i]
+    const neighbors = []
+    
+    // Find neighbors within perception radius
+    for (let j = 0; j < particles.length; j++) {
+      if (i === j) continue
+      
+      const other = particles[j]
+      const dx = boid.x - other.x
+      const dy = boid.y - other.y
+      const dist = Math.sqrt(dx * dx + dy * dy)
+      
+      if (dist < PERCEPTION_RADIUS) {
+        neighbors.push(other)
+      }
     }
+    
+    // Apply boid rules if there are neighbors
+    if (neighbors.length > 0) {
+      const sep = separation(boid, neighbors)
+      const ali = alignment(boid, neighbors)
+      const coh = cohesion(boid, neighbors)
+      
+      // Smooth inverse law: gradually reduce and eventually reverse forces as group grows
+      // This creates a smooth transition from attraction to repulsion
+      const groupSize = neighbors.length
+      const inverseStrength = Math.tanh((groupSize - 3) * 0.15) // Smooth S-curve from -1 to 1
+      
+      // Start with normal weights, gradually shift to negative as group grows
+      // At 3 neighbors: ~0 (neutral), at 8 neighbors: strongly negative
+      const alignmentWeight = ALIGNMENT_WEIGHT * (1 - inverseStrength * 1.5)
+      const cohesionWeight = COHESION_WEIGHT * (1 - inverseStrength * 1.5)
+      
+      // Apply weights
+      sep.x *= SEPARATION_WEIGHT
+      sep.y *= SEPARATION_WEIGHT
+      ali.x *= alignmentWeight
+      ali.y *= alignmentWeight
+      coh.x *= cohesionWeight
+      coh.y *= cohesionWeight
+      
+      // Limit forces
+      const sepLimited = limitForce(sep.x, sep.y, MAX_FORCE)
+      const aliLimited = limitForce(ali.x, ali.y, MAX_FORCE)
+      const cohLimited = limitForce(coh.x, coh.y, MAX_FORCE)
+      
+      // Accumulate forces
+      boid.ax = sepLimited.x + aliLimited.x + cohLimited.x
+      boid.ay = sepLimited.y + aliLimited.y + cohLimited.y
+    } else {
+      boid.ax = 0
+      boid.ay = 0
+    }
+  }
+  
+  // Update velocities and positions
+  for (let boid of particles) {
+    // Apply acceleration
+    boid.vx += boid.ax
+    boid.vy += boid.ay
+    
+    // Limit speed
+    const limited = limitSpeed(boid.vx, boid.vy, MAX_SPEED)
+    boid.vx = limited.x
+    boid.vy = limited.y
+    
+    // Update position
+    boid.x += boid.vx
+    boid.y += boid.vy
+    
+    // Wrap around edges
+    wrapEdges(boid, width, height)
   }
 }
 
@@ -114,28 +343,112 @@ function render() {
   gl.viewport(0, 0, width, height)
   gl.clear(gl.COLOR_BUFFER_BIT)
   
-  // Prepare particle positions
-  const positions = new Float32Array(particles.flatMap(p => [p.x, p.y]))
+  // Triangle size
+  const size = 8
   
-  // Update buffer
+  // Build geometry for all paper airplanes
+  const positions = []
+  const offsets = []
+  const rotations = []
+  
+  for (let p of particles) {
+    const angle = Math.atan2(p.vy, p.vx)
+    
+    // Paper airplane shape with wings
+    // Body triangle (center)
+    const bodyVerts = [
+      [size, 0],           // nose tip
+      [-size * 0.3, -size * 0.15],  // body bottom
+      [-size * 0.3, size * 0.15]    // body top
+    ]
+    
+    // Left wing (starts closer to the front)
+    const leftWingVerts = [
+      [size * 0.6, 0],              // wing root front (moved forward)
+      [-size * 0.5, 0],             // wing root back
+      [-size * 0.2, -size * 0.7]    // wing tip
+    ]
+    
+    // Right wing (starts closer to the front)
+    const rightWingVerts = [
+      [size * 0.6, 0],              // wing root front (moved forward)
+      [-size * 0.5, 0],             // wing root back
+      [-size * 0.2, size * 0.7]     // wing tip
+    ]
+    
+    // Add all vertices
+    for (let vert of [...bodyVerts, ...leftWingVerts, ...rightWingVerts]) {
+      positions.push(p.x, p.y)
+      offsets.push(vert[0], vert[1])
+      rotations.push(angle)
+    }
+  }
+  
+  // Set up position buffer
   const positionBuffer = gl.createBuffer()
   gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer)
-  gl.bufferData(gl.ARRAY_BUFFER, positions, gl.DYNAMIC_DRAW)
-  
-  // Set up attributes
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.DYNAMIC_DRAW)
   const positionLocation = gl.getAttribLocation(program, 'a_position')
   gl.enableVertexAttribArray(positionLocation)
   gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0)
+  
+  // Set up offset buffer
+  const offsetBuffer = gl.createBuffer()
+  gl.bindBuffer(gl.ARRAY_BUFFER, offsetBuffer)
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(offsets), gl.DYNAMIC_DRAW)
+  const offsetLocation = gl.getAttribLocation(program, 'a_offset')
+  gl.enableVertexAttribArray(offsetLocation)
+  gl.vertexAttribPointer(offsetLocation, 2, gl.FLOAT, false, 0, 0)
+  
+  // Set up rotation buffer
+  const rotationBuffer = gl.createBuffer()
+  gl.bindBuffer(gl.ARRAY_BUFFER, rotationBuffer)
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(rotations), gl.DYNAMIC_DRAW)
+  const rotationLocation = gl.getAttribLocation(program, 'a_rotation')
+  gl.enableVertexAttribArray(rotationLocation)
+  gl.vertexAttribPointer(rotationLocation, 1, gl.FLOAT, false, 0, 0)
   
   // Set resolution uniform
   const resolutionLocation = gl.getUniformLocation(program, 'u_resolution')
   gl.uniform2f(resolutionLocation, width, height)
   
-  // Draw particles
-  gl.drawArrays(gl.POINTS, 0, particles.length)
+  // Draw triangles
+  gl.drawArrays(gl.TRIANGLES, 0, particles.length * 9) // 9 vertices per airplane (3 triangles)
   
-  // Clean up buffer
+  // Draw center fold line on each airplane
+  const linePositions = []
+  const lineOffsets = []
+  const lineRotations = []
+  
+  for (let p of particles) {
+    const angle = Math.atan2(p.vy, p.vx)
+    
+    // Center fold line from nose to tail
+    linePositions.push(p.x, p.y, p.x, p.y)
+    lineOffsets.push(size, 0, -size * 0.5, 0)
+    lineRotations.push(angle, angle)
+  }
+  
+  // Update buffers for lines
+  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer)
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(linePositions), gl.DYNAMIC_DRAW)
+  gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0)
+  
+  gl.bindBuffer(gl.ARRAY_BUFFER, offsetBuffer)
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(lineOffsets), gl.DYNAMIC_DRAW)
+  gl.vertexAttribPointer(offsetLocation, 2, gl.FLOAT, false, 0, 0)
+  
+  gl.bindBuffer(gl.ARRAY_BUFFER, rotationBuffer)
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(lineRotations), gl.DYNAMIC_DRAW)
+  gl.vertexAttribPointer(rotationLocation, 1, gl.FLOAT, false, 0, 0)
+  
+  // Draw lines
+  gl.drawArrays(gl.LINES, 0, particles.length * 2)
+  
+  // Clean up buffers
   gl.deleteBuffer(positionBuffer)
+  gl.deleteBuffer(offsetBuffer)
+  gl.deleteBuffer(rotationBuffer)
   
   // Continue animation
   animationFrameId = requestAnimationFrame(render)
