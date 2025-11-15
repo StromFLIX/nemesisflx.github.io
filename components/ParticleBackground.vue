@@ -1,7 +1,7 @@
 <template>
   <div>
     <!-- Control sliders -->
-    <div v-if="showControls" class="fixed top-4 left-1/2 transform -translate-x-1/2 flex gap-4 md:gap-8 z-20 px-4 max-w-full overflow-x-auto">
+    <div v-if="showControls" class="fixed top-4 left-1/2 transform -translate-x-1/2 flex gap-4 md:gap-8 z-50 px-4 max-w-full overflow-x-auto" style="pointer-events: auto;">
       <!-- Alignment slider -->
       <div class="flex flex-col items-center flex-shrink-0">
         <div class="flex items-center gap-1 md:gap-2">
