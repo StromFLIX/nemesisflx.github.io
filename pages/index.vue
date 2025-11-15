@@ -241,6 +241,17 @@ const projects = ref([
     ]
   },
   {
+    title: 'Politrace',
+    contributors: [
+      { name: 'Felix', username: 'stromflix' }
+    ],
+    description: 'An AI tool that reads political party programs and reveals how different parties approach the same issues, making it easy to compare their proposed solutions and political stances side-by-side.',
+    image: '/project_images/politrace.png',
+    links: [
+      { label: 'Politrace', url: 'https://politrace.stromflix.com/' },
+    ]
+  },
+  {
     title: 'Indexadillo',
     contributors: [
       { name: 'Felix', username: 'stromflix' }
