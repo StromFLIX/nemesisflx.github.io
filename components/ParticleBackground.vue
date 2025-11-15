@@ -216,8 +216,10 @@ function initParticles(width, height) {
     const angle = Math.random() * Math.PI * 2
     const speed = MIN_SPEED + Math.random() * (MAX_SPEED - MIN_SPEED)
     
-    // Stagger spawn times over SPAWN_DURATION
-    const spawnDelay = (i / particleCount) * SPAWN_DURATION
+    // Non-linear spawn distribution: faster at start, slower at end
+    // Using exponential curve for spawn timing
+    const normalizedIndex = i / particleCount
+    const spawnDelay = SPAWN_DURATION * Math.pow(normalizedIndex, 1.8)
     
     particles.push({
       x: Math.random() * width,

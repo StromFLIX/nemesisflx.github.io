@@ -4,10 +4,10 @@
       <ParticleBackground />
     </ClientOnly>
     <!-- Main content section -->
-    <div class="flex flex-col items-center justify-start pt-24 md:pt-32">
-      <div class="text-6xl md:text-8xl text-gray-200 w-screen text-center relative z-10">Felix.</div>
-      <div class="text-xl md:text-2xl text-gray-600 w-screen text-center relative z-10">Software Developer</div>
-      <div class="w-screen flex justify-center mt-3 relative z-10">
+    <div class="flex flex-col items-center justify-start pt-24 md:pt-32 relative z-30">
+      <div class="text-6xl md:text-8xl text-gray-200 w-screen text-center relative">Felix.</div>
+      <div class="text-xl md:text-2xl text-gray-600 w-screen text-center relative">Software Developer</div>
+      <div class="w-screen flex justify-center mt-3 relative">
       <button class="m-2 p-1 px-2 shadow-lg rounded-full bg-blue-500">
         <a href="mailto:felix.moenckemeyer@gmail.com">
           <font-awesome-icon style="font-size: 16px" :icon="['fas', 'envelope']" />
@@ -19,14 +19,14 @@
         </a>
       </button>
       <div class="relative">
-        <div class="m-1" @mouseenter="cvHover = true" @mouseleave="setHoverTimer()">
+        <div class="m-1" @mouseenter="cvHover = true" @mouseleave="setHoverTimer()" @click.stop="toggleCV">
           <div class="p-1 bg-blue-500 shadow-lg rounded-full">
             <div class="rounded-full bg-gray-200" style="padding: 4px 10px 4px 10px">
               <font-awesome-icon style="font-size: 16px" :icon="['fas', 'file-alt']" />
             </div>
           </div>
         </div>
-        <div v-if="cvHover" class="absolute w-96" style="left: 50%; transform: translateX(-50%)" @mouseenter="clearHoverTimer()" @mouseleave="cvHover = false">
+        <div v-if="cvHover" class="absolute w-96" style="left: 50%; transform: translateX(-50%); z-index: 100;" @mouseenter="clearHoverTimer()" @mouseleave="setHoverTimer()" @click.stop>
           <div class="arrow absolute mt-0" style="left: 50%; transform: translateX(-50%)" />
           <div class="bg-gray-100 rounded p-0 m-2 ">
             <div>
@@ -190,6 +190,25 @@ const setHoverTimer = () => {
 const clearHoverTimer = () => {
   clearTimeout(timer)
 }
+
+const toggleCV = () => {
+  cvHover.value = !cvHover.value
+  if (timer) clearTimeout(timer)
+}
+
+const closeCV = (event) => {
+  if (cvHover.value) {
+    cvHover.value = false
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', closeCV)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', closeCV)
+})
 
 const scrollProjects = (direction) => {
   if (!projectsContainer.value) return
