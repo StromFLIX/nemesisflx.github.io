@@ -2,19 +2,6 @@
   <div>
     <!-- Control sliders -->
     <div v-if="showControls" class="fixed top-4 left-1/2 transform -translate-x-1/2 flex gap-4 md:gap-8 z-20 px-4 max-w-full overflow-x-auto">
-      <!-- Separation slider -->
-      <div class="flex flex-col items-center flex-shrink-0">
-        <div class="flex items-center gap-1 md:gap-2">
-          <button @click="decreaseSeparation" class="text-stone-400 hover:text-stone-300 text-lg md:text-xl w-5 h-5 md:w-6 md:h-6 flex items-center justify-center flex-shrink-0">−</button>
-          <div class="relative w-16 md:w-24 h-0.5 bg-stone-600 cursor-pointer flex-shrink-0" @mousedown="startDrag($event, 'separation')" @touchstart="startDrag($event, 'separation')">
-            <div :style="{left: separationPercent + '%'}" class="absolute w-2 h-2 bg-stone-400 rounded-full transform -translate-x-1/2 -translate-y-1/2 top-0 pointer-events-none"></div>
-          </div>
-          <button @click="increaseSeparation" class="text-stone-400 hover:text-stone-300 text-lg md:text-xl w-5 h-5 md:w-6 md:h-6 flex items-center justify-center flex-shrink-0">+</button>
-        </div>
-        <span class="text-xs text-stone-500 mt-1 whitespace-nowrap">separation</span>
-        <span class="text-xs text-stone-400 mt-0.5">{{ separationWeight.toFixed(1) }}</span>
-      </div>
-      
       <!-- Alignment slider -->
       <div class="flex flex-col items-center flex-shrink-0">
         <div class="flex items-center gap-1 md:gap-2">
@@ -73,7 +60,7 @@ let program = null
 let animationFrameId = null
 let particles = []
 let startTime = 0
-const SPAWN_DURATION = 120000 // 2 minutes to spawn all
+const SPAWN_DURATION = 300000 // 5 minutes to spawn all
 const FADE_IN_DURATION = 1000 // 1 second fade in per airplane
 
 // Adjustable boid parameters
@@ -392,7 +379,7 @@ function wrapEdges(boid, width, height) {
 function updateParticles(width, height) {
   const currentTime = Date.now() - startTime
   
-  // Show controls after 2 minutes
+  // Show controls after 10 minutes
   if (currentTime >= SPAWN_DURATION && !showControls.value) {
     showControls.value = true
   }
