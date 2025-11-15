@@ -1,11 +1,13 @@
 <template>
-  <div class="h-screen flex flex-wrap content-center bg-gray-900 relative">
+  <div class="min-h-screen bg-gray-900 relative overflow-x-hidden">
     <ClientOnly>
       <ParticleBackground />
     </ClientOnly>
-    <div class="text-8xl text-gray-200 w-screen text-center relative z-10">Felix.</div>
-    <div class="text-2xl text-gray-600 w-screen text-center relative z-10">Software Developer</div>
-    <div class="w-screen flex justify-center mt-3 relative z-10">
+    <!-- Main content section -->
+    <div class="flex flex-col items-center justify-start pt-24 md:pt-32">
+      <div class="text-6xl md:text-8xl text-gray-200 w-screen text-center relative z-10">Felix.</div>
+      <div class="text-xl md:text-2xl text-gray-600 w-screen text-center relative z-10">Software Developer</div>
+      <div class="w-screen flex justify-center mt-3 relative z-10">
       <button class="m-2 p-1 px-2 shadow-lg rounded-full bg-blue-500">
         <a href="mailto:felix.moenckemeyer@gmail.com">
           <font-awesome-icon style="font-size: 16px" :icon="['fas', 'envelope']" />
@@ -91,11 +93,92 @@
         </a>
       </button>
     </div>
+    </div>
+
+    <!-- Projects Section -->
+    <div class="w-full mt-20 px-4 md:px-8 pb-16 relative z-10">
+      <div class="relative">
+        <!-- Left scroll button -->
+        <button @click="scrollProjects('left')" class="hidden md:block absolute left-0 top-1/2 -translate-y-1/2 z-20 bg-gray-800/90 hover:bg-gray-700/90 backdrop-blur-sm text-gray-200 rounded-full p-3 shadow-lg transition-all">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        
+        <!-- Right scroll button -->
+        <button @click="scrollProjects('right')" class="hidden md:block absolute right-0 top-1/2 -translate-y-1/2 z-20 bg-gray-800/90 hover:bg-gray-700/90 backdrop-blur-sm text-gray-200 rounded-full p-3 shadow-lg transition-all">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+        
+      <div ref="projectsContainer" class="overflow-x-auto pb-4 scrollbar-hide scroll-smooth">
+        <div class="flex space-x-6 px-4">
+          <!-- Project Card 1 -->
+          <div v-for="project in projects" :key="project.id" class="flex-none w-80 bg-gray-800/80 backdrop-blur-sm rounded-lg overflow-hidden flex flex-col">
+            <!-- Image Section (1:1 aspect ratio) -->
+            <div class="w-full h-40 bg-gray-700 overflow-hidden">
+              <img :src="project.image" :alt="project.title" class="w-full h-full object-cover" />
+            </div>
+            
+            <!-- Content Section -->
+            <div class="p-5 flex flex-col flex-grow">
+              <!-- Avatar List and Title Row -->
+              <div class="mb-3">
+                <h3 class="text-lg font-semibold text-gray-200 mb-2">{{ project.title }}</h3>
+                <div class="flex items-center">
+                  <div class="flex items-center mr-2">
+                    <!-- Show first 3 avatars -->
+                    <template v-for="(contributor, index) in project.contributors" :key="contributor.username">
+                      <a v-if="index < 3" :href="`https://github.com/${contributor.username}`" target="_blank" class="relative inline-block -ml-2 first:ml-0">
+                        <img :src="`https://github.com/${contributor.username}.png`" :alt="contributor.name" class="w-10 h-10 rounded-full ring-2 ring-gray-800 hover:ring-blue-500 hover:z-10 transition-all" :title="contributor.name" />
+                      </a>
+                    </template>
+                    <!-- Show +X more button if there are more than 3 -->
+                    <button v-if="project.contributors.length > 3" @click="expandedProject = expandedProject === project.id ? null : project.id" class="relative inline-block -ml-2 w-10 h-10 rounded-full ring-2 ring-gray-800 bg-gray-700 hover:bg-gray-600 hover:ring-blue-500 transition-all text-xs text-gray-300 font-semibold z-0 hover:z-10">
+                      +{{ project.contributors.length - 3 }}
+                    </button>
+                  </div>
+                </div>
+                <!-- Expanded contributor list -->
+                <div v-if="expandedProject === project.id" class="mt-3 p-3 bg-gray-700/80 backdrop-blur-sm rounded-lg">
+                  <p class="text-xs text-gray-400 mb-2">All contributors:</p>
+                  <div class="flex flex-wrap gap-2">
+                    <a v-for="contributor in project.contributors" :key="contributor.username" :href="`https://github.com/${contributor.username}`" target="_blank" class="flex items-center bg-gray-600/80 backdrop-blur-sm hover:bg-gray-500/80 rounded-full pr-3 transition-colors">
+                      <img :src="`https://github.com/${contributor.username}.png`" :alt="contributor.name" class="w-8 h-8 rounded-full ring-2 ring-gray-700" />
+                      <span class="ml-2 text-sm text-gray-200">{{ contributor.name }}</span>
+                    </a>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Description -->
+              <p class="text-sm text-gray-400 mb-4 flex-grow">{{ project.description }}</p>
+              
+              <!-- Links - Horizontal Scrollable - Always at bottom -->
+              <div class="overflow-x-auto scrollbar-hide mt-auto">
+                <div class="flex space-x-3">
+                  <a v-for="link in project.links" :key="link.url" :href="link.url" target="_blank" class="flex-none text-blue-400 hover:text-blue-300 text-sm transition-colors whitespace-nowrap flex items-center gap-1">
+                    {{ link.label }}
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 const cvHover = ref(false)
+const expandedProject = ref(null)
+const projectsContainer = ref(null)
 let timer = null
 
 const setHoverTimer = () => {
@@ -107,6 +190,90 @@ const setHoverTimer = () => {
 const clearHoverTimer = () => {
   clearTimeout(timer)
 }
+
+const scrollProjects = (direction) => {
+  if (!projectsContainer.value) return
+  const scrollAmount = 350 // Width of card + gap
+  const currentScroll = projectsContainer.value.scrollLeft
+  projectsContainer.value.scrollTo({
+    left: direction === 'left' ? currentScroll - scrollAmount : currentScroll + scrollAmount,
+    behavior: 'smooth'
+  })
+}
+
+// Example projects data
+const projects = ref([
+  {
+    title: 'RehPublic: Wildlife Monitoring',
+    contributors: [
+      { name: 'Felix', username: 'stromflix' },
+      { name: 'Kristof', username: 'ArzelaAscoIi' },
+      { name: 'Simon', username: 'nglhrdt' },
+      { name: 'Markus', username: 'toybaer' },
+      { name: 'Aaron', username: 'aaroneggert' },
+    ],
+    description: 'An AI-powered camera trap platform that automatically detects and maps wildlife, eliminating manual image review for biodiversity monitoring.',
+    image: '/project_images/rehpublic.png',
+    links: [
+      { label: 'RehPublic Application', url: 'https://rehpublic.stromflix.com' },
+    ]
+  },
+  {
+    title: 'Build yout ETF',
+    contributors: [
+      { name: 'Felix', username: 'stromflix' }
+    ],
+    description: 'Build Your ETF is a web application that automatically optimizes ETF portfolio combinations to match your desired country and industry allocation preferences, helping investors construct diversified portfolios without manual research.',
+    image: '/project_images/build-your-etf.png',
+    links: [
+      { label: 'Build Your ETF Application', url: 'https://build-your-etf.stromflix.com/' },
+    ]
+  },
+  {
+    title: 'Hallucination News',
+    contributors: [
+      { name: 'Felix', username: 'stromflix' }
+    ],
+    description: 'Automated system that monitors tabloid RSS feeds, uses AI to identify the most questionable and debunkable articles, performs fact-checking with real-time web research, and publishes verified analysis as Astro-based news content.',
+    image: '/project_images/hallucination-news.png',
+    links: [
+      { label: 'Hallucination News', url: 'https://hallucination.news/' },
+    ]
+  },
+  {
+    title: 'Indexadillo',
+    contributors: [
+      { name: 'Felix', username: 'stromflix' }
+    ],
+    description: 'Indexadillo is a scalable, observable Azure-based document indexing pipeline that uses Durable Functions to automatically extract, chunk, embed, and upload documents to Azure AI Search without restarting on failures.',
+    image: '/project_images/indexadillo.png',
+    links: [
+      { label: 'Github: Indexadillo', url: 'https://github.com/Azure-Samples/indexadillo' },
+    ]
+  },
+  {
+    title: 'Factuality',
+    contributors: [
+      { name: 'Felix', username: 'stromflix' }
+    ],
+    description: 'Based on "long-form-factuality" a python based processor to easily fact check anything.',
+    image: '/project_images/factuality.png',
+    links: [
+      { label: 'Github: Factuality', url: 'https://github.com/StromFLIX/factuality' },
+    ]
+  },
+  {
+    title: 'Obsidian',
+    contributors: [
+      { name: 'Felix', username: 'stromflix' }
+    ],
+    description: 'A fast, embeddable immutability layer that makes data auditable and tamper-proof. Obsidian enables any system to become a trusted participant in data ecosystems by ensuring information remains reliable and verifiable.',
+    image: '/project_images/obsidian.png',
+    links: [
+      { label: 'Github: Obsidian', url: 'https://github.com/StromFLIX/obsidian' },
+    ]
+  },
+])
 </script>
 
 <style>
@@ -117,5 +284,23 @@ const clearHoverTimer = () => {
   border-left: 6px solid transparent;
   border-right: 6px solid transparent;
   border-bottom: 6px solid #F1F5F9;
+}
+
+/* Hide scrollbar but keep functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}
+
+/* Line clamp for description text */
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 </style>
