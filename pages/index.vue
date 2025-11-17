@@ -118,7 +118,12 @@
           <div v-for="project in projects" :key="project.id" class="flex-none w-80 bg-gray-800/80 backdrop-blur-sm rounded-lg overflow-hidden flex flex-col">
             <!-- Image Section (1:1 aspect ratio) -->
             <div class="w-full h-40 bg-gray-700 overflow-hidden">
-              <img :src="project.image" :alt="project.title" class="w-full h-full object-cover" />
+              <img v-if="project.image" :src="project.image" :alt="project.title" class="w-full h-full object-cover" />
+              <div v-else class="w-full h-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-white/80" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
             </div>
             
             <!-- Content Section -->
@@ -202,14 +207,6 @@ const closeCV = (event) => {
   }
 }
 
-onMounted(() => {
-  document.addEventListener('click', closeCV)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('click', closeCV)
-})
-
 const scrollProjects = (direction) => {
   if (!projectsContainer.value) return
   const scrollAmount = 350 // Width of card + gap
@@ -220,8 +217,31 @@ const scrollProjects = (direction) => {
   })
 }
 
-// Example projects data
-const projects = ref([
+// Fetch blog posts from RSS feed
+const fetchBlogPosts = async () => {
+  try {
+    const response = await fetch('https://blog.stromflix.com/rss.xml')
+    const text = await response.text()
+    const parser = new DOMParser()
+    const xml = parser.parseFromString(text, 'text/xml')
+    const items = xml.querySelectorAll('item')
+    
+    return Array.from(items).map(item => ({
+      title: item.querySelector('title')?.textContent || '',
+      description: item.querySelector('description')?.textContent || '',
+      date: new Date(item.querySelector('pubDate')?.textContent || ''),
+      url: item.querySelector('link')?.textContent || '',
+      image: item.querySelector('enclosure')?.getAttribute('url') || null,
+      type: 'blog'
+    }))
+  } catch (error) {
+    console.error('Error fetching blog posts:', error)
+    return []
+  }
+}
+
+// Static projects data with dates for sorting
+const staticProjects = [
   {
     title: 'RehPublic: Wildlife Monitoring',
     contributors: [
@@ -235,7 +255,9 @@ const projects = ref([
     image: '/project_images/rehpublic.png',
     links: [
       { label: 'RehPublic Application', url: 'https://rehpublic.stromflix.com' },
-    ]
+    ],
+    date: new Date('2025-11-08'),
+    type: 'project'
   },
   {
     title: 'Build yout ETF',
@@ -246,7 +268,9 @@ const projects = ref([
     image: '/project_images/build-your-etf.png',
     links: [
       { label: 'Build Your ETF Application', url: 'https://build-your-etf.stromflix.com/' },
-    ]
+    ],
+    date: new Date('2025-10-04'),
+    type: 'project'
   },
   {
     title: 'Hallucination News',
@@ -257,7 +281,9 @@ const projects = ref([
     image: '/project_images/hallucination-news.png',
     links: [
       { label: 'Hallucination News', url: 'https://hallucination.news/' },
-    ]
+    ],
+    date: new Date('2025-07-01'),
+    type: 'project'
   },
   {
     title: 'Politrace',
@@ -268,7 +294,9 @@ const projects = ref([
     image: '/project_images/politrace.png',
     links: [
       { label: 'Politrace', url: 'https://politrace.stromflix.com/' },
-    ]
+    ],
+    date: new Date('2025-03-14'),
+    type: 'project'
   },
   {
     title: 'Indexadillo',
@@ -279,7 +307,9 @@ const projects = ref([
     image: '/project_images/indexadillo.png',
     links: [
       { label: 'Github: Indexadillo', url: 'https://github.com/Azure-Samples/indexadillo' },
-    ]
+    ],
+    date: new Date('2025-07-14'),
+    type: 'project'
   },
   {
     title: 'Factuality',
@@ -290,7 +320,9 @@ const projects = ref([
     image: '/project_images/factuality.png',
     links: [
       { label: 'Github: Factuality', url: 'https://github.com/StromFLIX/factuality' },
-    ]
+    ],
+    date: new Date('2024-03-31'),
+    type: 'project'
   },
   {
     title: 'Obsidian',
@@ -301,9 +333,43 @@ const projects = ref([
     image: '/project_images/obsidian.png',
     links: [
       { label: 'Github: Obsidian', url: 'https://github.com/StromFLIX/obsidian' },
-    ]
+    ],
+    date: new Date('2020-12-06'),
+    type: 'project'
   },
-])
+]
+
+// Combined projects array that merges static projects with blog posts
+const projects = ref([])
+
+// Fetch and merge projects with blog posts on mount
+onMounted(async () => {
+  document.addEventListener('click', closeCV)
+  
+  const blogPosts = await fetchBlogPosts()
+  
+  // Convert blog posts to project format
+  const blogProjects = blogPosts.map(post => ({
+    title: post.title,
+    contributors: [
+      { name: 'Felix', username: 'stromflix' }
+    ],
+    description: post.description,
+    image: post.image,
+    links: [
+      { label: 'Read Article', url: post.url },
+    ],
+    date: post.date,
+    type: 'blog'
+  }))
+  
+  // Merge and sort by date (newest first)
+  projects.value = [...staticProjects, ...blogProjects].sort((a, b) => b.date - a.date)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', closeCV)
+})
 </script>
 
 <style>
