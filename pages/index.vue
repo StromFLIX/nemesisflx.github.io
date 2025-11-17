@@ -6,10 +6,10 @@
     <!-- Main content section -->
     <div class="flex flex-col items-center justify-start pt-24 md:pt-32 relative z-30">
       <div class="text-6xl md:text-8xl text-gray-200 w-screen text-center relative">Felix.</div>
-      <div class="text-xl md:text-2xl text-gray-600 w-screen text-center relative h-8 md:h-10 flex items-center justify-center">
-        <div class="inline-block overflow-hidden h-8 md:h-10 relative">
-          <div class="transition-transform duration-4000 ease-out" :style="{ transform: `translateY(-${currentWordIndex * 2}rem)` }">
-            <div v-for="(title, index) in titles" :key="index" class="h-8 md:h-10 flex items-center justify-center">
+      <div class="text-xl md:text-2xl text-gray-600 w-screen text-center relative flex items-center justify-center" style="height: 2.5rem;">
+        <div class="inline-block overflow-hidden relative" style="height: 2.5rem;">
+          <div class="transition-transform duration-500 ease-out" :style="{ transform: `translateY(-${currentWordIndex * 2.5}rem)` }">
+            <div v-for="(title, index) in titles" :key="index" class="flex items-center justify-center" style="height: 2.5rem;">
               <span>{{ title }}</span>
             </div>
           </div>
@@ -219,8 +219,8 @@ const finalTitle = 'Problem Solver'
 let wordAnimationComplete = false
 
 const animateTitle = () => {
-  let cycleCount = 0
-  const maxCycles = 1 // Number of fast cycles before settling
+  let iterations = 0
+  const totalIterations = titles.length - 1 // Go through all titles once
   
   const fastInterval = setInterval(() => {
     if (wordAnimationComplete) {
@@ -228,21 +228,15 @@ const animateTitle = () => {
       return
     }
     
-    currentWordIndex.value = (currentWordIndex.value + 1) % titles.length
+    iterations++
+    currentWordIndex.value = iterations
     
-    // Check if we've reached the end of a cycle
-    if (currentWordIndex.value === titles.length - 1) {
-      cycleCount++
-      if (cycleCount >= maxCycles) {
-        clearInterval(fastInterval)
-        // Settle on final title after a brief pause
-        setTimeout(() => {
-          currentWordIndex.value = titles.length - 1
-          wordAnimationComplete = true
-        }, 300)
-      }
+    // After going through all titles once, settle on the last one
+    if (iterations >= totalIterations) {
+      clearInterval(fastInterval)
+      wordAnimationComplete = true
     }
-  }, 1000) // Rotation speed
+  }, 1000) // Rotation speed - 1 second per title
 }
 
 const setHoverTimer = () => {
