@@ -131,20 +131,30 @@
               <!-- Avatar List and Title Row -->
               <div class="mb-3">
                 <h3 class="text-lg font-semibold text-gray-200 mb-2">{{ project.title }}</h3>
-                <div class="flex items-center">
-                  <div class="flex items-center mr-2">
+                
+                <!-- Type, Date Pills and Avatars -->
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                    {{ project.type === 'blog' ? 'Article' : 'Project' }}
+                  </span>
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-700/80 text-gray-300 border border-gray-600/50">
+                    {{ project.date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' }) }}
+                  </span>
+                  
+                  <div class="flex items-center ml-1">
                     <!-- Show first 3 avatars -->
                     <template v-for="(contributor, index) in project.contributors" :key="contributor.username">
-                      <a v-if="index < 3" :href="`https://github.com/${contributor.username}`" target="_blank" class="relative inline-block -ml-2 first:ml-0">
-                        <img :src="`https://github.com/${contributor.username}.png`" :alt="contributor.name" class="w-10 h-10 rounded-full ring-2 ring-gray-800 hover:ring-blue-500 hover:z-10 transition-all" :title="contributor.name" />
+                      <a v-if="index < 3" :href="`https://github.com/${contributor.username}`" target="_blank" class="relative inline-block -ml-1.5 first:ml-0">
+                        <img :src="`https://github.com/${contributor.username}.png`" :alt="contributor.name" class="w-6 h-6 rounded-full ring-2 ring-gray-800 hover:ring-blue-500 hover:z-10 transition-all" :title="contributor.name" />
                       </a>
                     </template>
                     <!-- Show +X more button if there are more than 3 -->
-                    <button v-if="project.contributors.length > 3" @click="expandedProject = expandedProject === project.id ? null : project.id" class="relative inline-block -ml-2 w-10 h-10 rounded-full ring-2 ring-gray-800 bg-gray-700 hover:bg-gray-600 hover:ring-blue-500 transition-all text-xs text-gray-300 font-semibold z-0 hover:z-10">
+                    <button v-if="project.contributors.length > 3" @click="expandedProject = expandedProject === project.id ? null : project.id" class="relative inline-block -ml-1.5 w-6 h-6 rounded-full ring-2 ring-gray-800 bg-gray-700 hover:bg-gray-600 hover:ring-blue-500 transition-all text-xs text-gray-300 font-semibold z-0 hover:z-10">
                       +{{ project.contributors.length - 3 }}
                     </button>
                   </div>
                 </div>
+                
                 <!-- Expanded contributor list -->
                 <div v-if="expandedProject === project.id" class="mt-3 p-3 bg-gray-700/80 backdrop-blur-sm rounded-lg">
                   <p class="text-xs text-gray-400 mb-2">All contributors:</p>
